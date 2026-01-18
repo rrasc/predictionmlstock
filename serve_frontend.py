@@ -31,14 +31,28 @@ def main():
         print("Please make sure the frontend directory exists.")
         return
 
+    # Get local network IP address
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Connect to a remote server to get local IP
+        s.connect(('8.8.8.8', 80))
+        local_ip = s.getsockname()[0]
+    except:
+        local_ip = '127.0.0.1'
+    finally:
+        s.close()
+
     # Start server
     with socketserver.TCPServer(("", PORT), MyHTTPRequestHandler) as httpd:
         print(f"\n{'='*60}")
         print(f"🚀 ML Trading System Frontend Server")
         print(f"{'='*60}")
-        print(f"\n✅ Server running at: http://localhost:{PORT}")
+        print(f"\n✅ Server running successfully!")
         print(f"📁 Serving directory: {DIRECTORY}/")
-        print(f"\n📊 Open in browser: http://localhost:{PORT}\n")
+        print(f"\n🖥️  Desktop: http://localhost:{PORT}")
+        print(f"📱 Mobile:  http://{local_ip}:{PORT}")
+        print(f"\n💡 Make sure your mobile is on the same WiFi network!")
         print(f"{'='*60}")
         print(f"Press Ctrl+C to stop the server\n")
 
