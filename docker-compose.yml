@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # ML Trading API Service
+  api:
+    build: .
+    container_name: ml-trading-api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://trading_user:trading_pass@db:5432/trading_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: ml-trading-db
+    environment:
+      - POSTGRES_USER=trading_user
+      - POSTGRES_PASSWORD=trading_pass
+      - POSTGRES_DB=trading_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Redis for caching and task queue
+  redis:
+    image: redis:7-alpine
+    container_name: ml-trading-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Celery Worker for background tasks
+  celery-worker:
+    build: .
+    container_name: ml-trading-celery
+    command: celery -A celery_tasks worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://trading_user:trading_pass@db:5432/trading_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Celery Beat for scheduled tasks
+  celery-beat:
+    build: .
+    container_name: ml-trading-beat
+    command: celery -A celery_tasks beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://trading_user:trading_pass@db:5432/trading_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: ml-trading-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  trading-network:
+    driver: bridge
