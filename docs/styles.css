@@ -396,12 +396,15 @@ body {
 .chart-container canvas {
     max-height: 400px !important;
     height: 400px !important;
+    width: 100% !important;
 }
 
 .chart-wrapper {
     position: relative;
-    height: 400px;
+    height: 400px !important;
+    max-height: 400px !important;
     width: 100%;
+    overflow: hidden;
 }
 
 /* Indicators Grid */

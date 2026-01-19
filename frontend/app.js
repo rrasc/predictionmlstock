@@ -1,12 +1,10 @@
 // Configuration
-const API_BASE_URL = 'http://localhost:5000/api/v1';
-const DEMO_MODE = true; // Set to false when backend is ready
+const API_BASE_URL = 'http://localhost:5000/api';
+const DEMO_MODE = false; // Using REAL data from Yahoo Finance!
 
-// ⚠️ DEMO MODE: Currently using simulated data
-// To use REAL data:
-// 1. Set DEMO_MODE = false
-// 2. Start backend: python api_server.py
-// 3. Add your Alpaca API keys in .env file
+// ✅ REAL DATA MODE: Using free Yahoo Finance data
+// No API keys needed!
+// To start backend: python simple_api.py
 
 // State
 let currentStock = null;
@@ -164,19 +162,13 @@ async function simulateAnalysis(symbol) {
 // Fetch Real Prediction
 async function fetchRealPrediction(symbol) {
     const response = await axios.post(`${API_BASE_URL}/predict`, {
-        symbol,
-        api_key: localStorage.getItem('alpaca_key'),
-        secret_key: localStorage.getItem('alpaca_secret')
-    }, {
-        headers: {
-            'Authorization': `Bearer ${authToken}`
-        }
+        symbol: symbol
     });
 
     const data = response.data;
 
-    // Generate historical data (in real app, fetch from API)
-    const historicalData = generateHistoricalData(data.current_price, 90);
+    // Use real historical data from API
+    const historicalData = data.historical_data || [];
 
     displayResults({
         symbol: data.symbol,
@@ -187,10 +179,10 @@ async function fetchRealPrediction(symbol) {
         currentPrice: data.current_price,
         historicalData,
         indicators: {
-            rsi: '--',
-            macd: '--',
-            bb: 'Loading...',
-            volume: 'Loading...'
+            rsi: data.indicators.rsi ? data.indicators.rsi.toFixed(2) : '--',
+            macd: data.indicators.macd ? data.indicators.macd.toFixed(2) : '--',
+            bb: data.indicators.bb_position || 'Normal',
+            volume: data.indicators.volume || 'Normal'
         }
     });
 }
@@ -324,6 +316,15 @@ function renderChart(data) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            aspectRatio: 2,
+            resizeDelay: 0,
+            onResize: function(chart, size) {
+                // Prevent chart from growing beyond 400px
+                if (chart.canvas) {
+                    chart.canvas.style.maxHeight = '400px';
+                    chart.canvas.style.height = '400px';
+                }
+            },
             plugins: {
                 legend: {
                     display: false
@@ -376,6 +377,22 @@ function renderChart(data) {
                 axis: 'x',
                 intersect: false
             }
+        }
+    });
+
+    // Force canvas size constraints
+    const canvas = document.getElementById('stockChart');
+    if (canvas) {
+        canvas.style.maxHeight = '400px';
+        canvas.style.height = '400px';
+        canvas.style.width = '100%';
+    }
+
+    // Prevent any resize events from changing the height
+    window.addEventListener('resize', function() {
+        if (canvas) {
+            canvas.style.maxHeight = '400px';
+            canvas.style.height = '400px';
         }
     });
 }
