@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Test</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #131722;
+            color: #d1d4dc;
+            padding: 20px;
+        }
+        #chartContainer {
+            width: 100%;
+            height: 400px;
+            background: #1e222d;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #1e222d;
+        }
+        .success { color: #26a69a; }
+        .error { color: #ef5350; }
+        button {
+            background: #2962ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #1e53e5;
+        }
+    </style>
+</head>
+<body>
+    <h1>TradingView Chart Test</h1>
+    <div class="status" id="status">Checking...</div>
+    <button onclick="testChart()">Test Chart Rendering</button>
+    <div id="chartContainer"></div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const statusDiv = document.getElementById('status');
+
+            // Check if library loaded
+            if (typeof LightweightCharts !== 'undefined') {
+                statusDiv.innerHTML = '<span class="success">✓ TradingView LightweightCharts library loaded successfully</span>';
+            } else {
+                statusDiv.innerHTML = '<span class="error">✗ TradingView library failed to load</span>';
+            }
+        });
+
+        function testChart() {
+            const statusDiv = document.getElementById('status');
+            const chartDiv = document.getElementById('chartContainer');
+
+            try {
+                console.log('Creating test chart...');
+                statusDiv.innerHTML = '<span>Creating chart...</span>';
+
+                // Clear any existing chart
+                chartDiv.innerHTML = '';
+
+                // Create chart
+                const chart = LightweightCharts.createChart(chartDiv, {
+                    width: chartDiv.offsetWidth,
+                    height: 400,
+                    layout: {
+                        background: { color: '#1e222d' },
+                        textColor: '#d1d4dc',
+                    },
+                    grid: {
+                        vertLines: { color: '#2a2e39' },
+                        horzLines: { color: '#2a2e39' },
+                    },
+                });
+
+                // Add candlestick series
+                const candleSeries = chart.addCandlestickSeries({
+                    upColor: '#26a69a',
+                    downColor: '#ef5350',
+                    wickUpColor: '#26a69a',
+                    wickDownColor: '#ef5350',
+                });
+
+                // Sample data
+                const data = [
+                    { time: '2024-01-01', open: 100, high: 110, low: 95, close: 105 },
+                    { time: '2024-01-02', open: 105, high: 115, low: 100, close: 108 },
+                    { time: '2024-01-03', open: 108, high: 120, low: 105, close: 115 },
+                    { time: '2024-01-04', open: 115, high: 118, low: 110, close: 112 },
+                    { time: '2024-01-05', open: 112, high: 125, low: 110, close: 120 },
+                ];
+
+                candleSeries.setData(data);
+
+                console.log('✓ Chart created successfully!');
+                statusDiv.innerHTML = '<span class="success">✓ Chart rendered successfully! You should see a candlestick chart below.</span>';
+
+            } catch (error) {
+                console.error('Chart error:', error);
+                statusDiv.innerHTML = '<span class="error">✗ Error: ' + error.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>
