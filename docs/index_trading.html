@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Trading System - Professional Stock Analysis</title>
+    <link rel="stylesheet" href="styles_trading.css">
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>ML Trading System</h1>
+                <span class="badge-live">LIVE</span>
+            </div>
+            <div class="header-info">
+                <span id="currentTime"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Stock Selector -->
+        <section class="stock-selector">
+            <div class="container">
+                <h2>Select Stock for AI Analysis</h2>
+                <div class="stock-grid">
+                    <button class="stock-btn" data-symbol="NVDA">
+                        <span class="symbol">NVDA</span>
+                        <span class="name">NVIDIA</span>
+                        <span class="change" id="change-NVDA">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="AAPL">
+                        <span class="symbol">AAPL</span>
+                        <span class="name">Apple</span>
+                        <span class="change" id="change-AAPL">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="MSFT">
+                        <span class="symbol">MSFT</span>
+                        <span class="name">Microsoft</span>
+                        <span class="change" id="change-MSFT">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="GOOGL">
+                        <span class="symbol">GOOGL</span>
+                        <span class="name">Google</span>
+                        <span class="change" id="change-GOOGL">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="TSLA">
+                        <span class="symbol">TSLA</span>
+                        <span class="name">Tesla</span>
+                        <span class="change" id="change-TSLA">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="META">
+                        <span class="symbol">META</span>
+                        <span class="name">Meta</span>
+                        <span class="change" id="change-META">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="AMD">
+                        <span class="symbol">AMD</span>
+                        <span class="name">AMD</span>
+                        <span class="change" id="change-AMD">--</span>
+                    </button>
+                    <button class="stock-btn" data-symbol="AVGO">
+                        <span class="symbol">AVGO</span>
+                        <span class="name">Broadcom</span>
+                        <span class="change" id="change-AVGO">--</span>
+                    </button>
+                </div>
+
+                <!-- Custom Symbol -->
+                <div class="custom-symbol">
+                    <input type="text" id="customSymbol" placeholder="Or enter symbol (e.g., AMZN, NFLX)">
+                    <button class="btn btn-primary" id="analyzeBtn">
+                        <i class="fas fa-search"></i> Analyze
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard -->
+        <div class="dashboard" id="dashboard" style="display: none;">
+            <div class="container-fluid">
+                <!-- Loading -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing with ML models...</p>
+                </div>
+
+                <!-- Results -->
+                <div class="results" id="results" style="display: none;">
+                    <!-- Top Bar - Stock Info -->
+                    <div class="stock-header">
+                        <div class="stock-title">
+                            <h1 id="stockSymbol">NVDA</h1>
+                            <span class="stock-name" id="stockName">NVIDIA Corporation</span>
+                        </div>
+                        <div class="stock-price-info">
+                            <div class="current-price">$<span id="stockPrice">0.00</span></div>
+                            <div class="price-change" id="priceChange">
+                                <span class="change-value">+0.00</span>
+                                <span class="change-percent">(+0.00%)</span>
+                            </div>
+                        </div>
+                        <div class="prediction-badge" id="predictionBadge">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>BUY</span>
+                            <div class="confidence">75%</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Grid -->
+                    <div class="trading-grid">
+                        <!-- Left: Chart -->
+                        <div class="chart-section">
+                            <!-- Timeframe Selector -->
+                            <div class="timeframe-selector">
+                                <button class="tf-btn" data-period="1d">1D</button>
+                                <button class="tf-btn" data-period="5d">5D</button>
+                                <button class="tf-btn active" data-period="1mo">1M</button>
+                                <button class="tf-btn" data-period="3mo">3M</button>
+                                <button class="tf-btn" data-period="6mo">6M</button>
+                                <button class="tf-btn" data-period="1y">1Y</button>
+                            </div>
+
+                            <!-- TradingView Chart -->
+                            <div class="chart-container-tv">
+                                <div id="tradingViewChart"></div>
+                            </div>
+
+                            <!-- Volume Chart -->
+                            <div class="volume-container">
+                                <div id="volumeChart"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Stats & Prediction -->
+                        <div class="stats-section">
+                            <!-- AI Prediction Card -->
+                            <div class="card prediction-card-full">
+                                <h3><i class="fas fa-brain"></i> AI Prediction</h3>
+                                <div class="prediction-details">
+                                    <div class="prediction-main">
+                                        <div class="pred-direction" id="predDirection">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>BUY</span>
+                                        </div>
+                                        <div class="pred-confidence">
+                                            <div class="conf-label">Confidence</div>
+                                            <div class="conf-value" id="confValue">0%</div>
+                                            <div class="conf-bar">
+                                                <div class="conf-fill" id="confFill"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="probability-grid">
+                                        <div class="prob-item up">
+                                            <i class="fas fa-arrow-up"></i>
+                                            <div>
+                                                <div class="prob-label">Upside</div>
+                                                <div class="prob-value" id="upProb">0%</div>
+                                            </div>
+                                        </div>
+                                        <div class="prob-item down">
+                                            <i class="fas fa-arrow-down"></i>
+                                            <div>
+                                                <div class="prob-label">Downside</div>
+                                                <div class="prob-value" id="downProb">0%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="model-info">
+                                        <small><i class="fas fa-cog"></i> Random Forest + Gradient Boosting</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Key Statistics -->
+                            <div class="card stats-card">
+                                <h3><i class="fas fa-chart-bar"></i> Technical Indicators</h3>
+                                <div class="stats-grid">
+                                    <div class="stat-item">
+                                        <div class="stat-label">RSI (14)</div>
+                                        <div class="stat-value" id="rsiValue">--</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">MACD</div>
+                                        <div class="stat-value" id="macdValue">--</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">SMA (20)</div>
+                                        <div class="stat-value" id="smaValue">--</div>
+                                    </div>
+                                    <div class="stat-item">
+                                        <div class="stat-label">Volume</div>
+                                        <div class="stat-value" id="volumeValue">--</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Data Source -->
+                            <div class="card source-card">
+                                <div class="source-info">
+                                    <i class="fas fa-database"></i>
+                                    <div>
+                                        <div class="source-label">Data Source</div>
+                                        <div class="source-value">Yahoo Finance (Live)</div>
+                                    </div>
+                                </div>
+                                <div class="source-info">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <div class="source-label">Last Updated</div>
+                                        <div class="source-value" id="lastUpdate">Just now</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <button class="btn btn-secondary btn-back" id="backBtn">
+                                <i class="fas fa-arrow-left"></i> Analyze Another Stock
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 ML Trading System. All rights reserved.</p>
+            <p class="disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                Disclaimer: Trading involves risk. Past performance is not indicative of future results.
+            </p>
+        </div>
+    </footer>
+
+    <script src="app_trading.js"></script>
+</body>
+</html>
