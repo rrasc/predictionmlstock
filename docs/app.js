@@ -2,6 +2,12 @@
 const API_BASE_URL = 'http://localhost:5000/api/v1';
 const DEMO_MODE = true; // Set to false when backend is ready
 
+// ⚠️ DEMO MODE: Currently using simulated data
+// To use REAL data:
+// 1. Set DEMO_MODE = false
+// 2. Start backend: python api_server.py
+// 3. Add your Alpaca API keys in .env file
+
 // State
 let currentStock = null;
 let authToken = null;
@@ -10,7 +16,16 @@ let stockChart = null;
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
+    updateDemoModeBadge();
 });
+
+// Update demo mode badge visibility
+function updateDemoModeBadge() {
+    const badge = document.getElementById('demoModeBadge');
+    if (badge) {
+        badge.style.display = DEMO_MODE ? 'block' : 'none';
+    }
+}
 
 // Event Listeners
 function initializeEventListeners() {
@@ -240,15 +255,26 @@ function displayResults(data) {
 // Generate Historical Data
 function generateHistoricalData(currentPrice, days) {
     const data = [];
-    let price = parseFloat(currentPrice);
+    const endPrice = parseFloat(currentPrice);
+
+    // Start from a price 90 days ago (slightly lower for realistic uptrend)
+    let startPrice = endPrice * (0.85 + Math.random() * 0.1); // 85-95% of current price
+    let price = startPrice;
 
     for (let i = days; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
 
-        // Random walk with slight upward bias
-        const change = (Math.random() - 0.48) * (price * 0.03);
-        price = Math.max(price + change, price * 0.5); // Prevent negative or too low
+        // Create more realistic price movement
+        // Mix of trend and random walk
+        const trendComponent = (endPrice - startPrice) / days; // Linear trend
+        const randomComponent = (Math.random() - 0.5) * (price * 0.015); // Smaller random changes
+
+        price = price + trendComponent + randomComponent;
+
+        // Keep price reasonable
+        price = Math.max(price, startPrice * 0.7);
+        price = Math.min(price, endPrice * 1.15);
 
         data.push({
             date: date.toISOString().split('T')[0],
@@ -256,8 +282,8 @@ function generateHistoricalData(currentPrice, days) {
         });
     }
 
-    // Ensure last price matches current price
-    data[data.length - 1].price = parseFloat(currentPrice);
+    // Ensure last price matches current price exactly
+    data[data.length - 1].price = endPrice;
 
     return data;
 }
@@ -352,10 +378,6 @@ function renderChart(data) {
             }
         }
     });
-
-    // Make chart responsive to container
-    const chartContainer = document.querySelector('.chart-container canvas');
-    chartContainer.style.height = '400px';
 }
 
 // Animate Results

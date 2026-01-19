@@ -10,6 +10,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- Demo Mode Badge -->
+    <div class="demo-mode-badge" id="demoModeBadge">
+        <i class="fas fa-flask"></i> DEMO MODE - Using Simulated Data
+    </div>
+
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -139,7 +144,9 @@
                     <!-- Stock Chart -->
                     <div class="chart-container">
                         <h3>Price History (90 Days)</h3>
-                        <canvas id="stockChart"></canvas>
+                        <div class="chart-wrapper">
+                            <canvas id="stockChart"></canvas>
+                        </div>
                     </div>
 
                     <!-- Technical Indicators -->
