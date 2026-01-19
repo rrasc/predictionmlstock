@@ -95,31 +95,53 @@ async function analyzeStock(symbol, period = '3mo') {
 }
 
 async function fetchRealYahooData(symbol, period = '3mo') {
+    console.log('Fetching data for', symbol, 'period:', period);
+
     // Build Yahoo Finance API URL
     const range = period;
     const interval = '1d';
     const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=${range}&interval=${interval}`;
 
+    console.log('Yahoo URL:', yahooUrl);
+
     try {
         // Try direct call first (works sometimes)
         let response;
         try {
+            console.log('Attempting direct fetch...');
             response = await fetch(yahooUrl);
+            console.log('Direct fetch response:', response.status);
         } catch (corsError) {
             // If CORS fails, use proxy
-            response = await fetch(CORS_PROXY + encodeURIComponent(yahooUrl));
+            console.log('Direct fetch failed, using CORS proxy...');
+            const proxyUrl = CORS_PROXY + encodeURIComponent(yahooUrl);
+            console.log('Proxy URL:', proxyUrl);
+            response = await fetch(proxyUrl);
+            console.log('Proxy fetch response:', response.status);
         }
 
         const json = await response.json();
+        console.log('API response received');
+
+        if (!json.chart || !json.chart.result || json.chart.result.length === 0) {
+            console.error('Invalid API response:', json);
+            throw new Error('Invalid data from Yahoo Finance');
+        }
+
         const result = json.chart.result[0];
+        console.log('Result obtained');
 
         // Extract data
         const timestamps = result.timestamp;
         const quote = result.indicators.quote[0];
         const meta = result.meta;
 
+        console.log('Data points:', timestamps?.length);
+        console.log('Meta:', meta);
+
         // Current price
         const currentPrice = meta.regularMarketPrice;
+        console.log('Current price:', currentPrice);
 
         // Build historical data (OHLCV)
         const historical = [];
@@ -316,19 +338,46 @@ function displayResults(data) {
 }
 
 function createCharts(historicalData, symbol) {
+    console.log('createCharts called with data:', historicalData?.length, 'points');
+
     // Clear existing charts
-    document.getElementById('tradingViewChart').innerHTML = '';
-    document.getElementById('volumeChart').innerHTML = '';
+    const chartDiv = document.getElementById('tradingViewChart');
+    const volumeDiv = document.getElementById('volumeChart');
+
+    if (!chartDiv || !volumeDiv) {
+        console.error('Chart containers not found!');
+        return;
+    }
+
+    chartDiv.innerHTML = '';
+    volumeDiv.innerHTML = '';
 
     if (!historicalData || historicalData.length === 0) {
         console.error('No historical data available');
         return;
     }
 
+    // Check if LightweightCharts is loaded
+    if (typeof LightweightCharts === 'undefined') {
+        console.error('LightweightCharts library not loaded!');
+        chartDiv.innerHTML = '<div style="color: #ef5350; padding: 20px; text-align: center;">Chart library failed to load. Please refresh the page.</div>';
+        return;
+    }
+
+    console.log('LightweightCharts loaded successfully');
+
     // Filter out null values
     const validData = historicalData.filter(d =>
         d.open != null && d.high != null && d.low != null && d.close != null
     );
+
+    console.log('Valid data points:', validData.length);
+
+    if (validData.length === 0) {
+        console.error('No valid data after filtering');
+        chartDiv.innerHTML = '<div style="color: #ef5350; padding: 20px; text-align: center;">No valid price data available</div>';
+        return;
+    }
 
     // Prepare data for candlestick chart
     const candleData = validData.map(d => ({
@@ -345,70 +394,92 @@ function createCharts(historicalData, symbol) {
         color: d.close >= d.open ? '#26a69a80' : '#ef535080'
     }));
 
-    // Create price chart
-    priceChart = LightweightCharts.createChart(document.getElementById('tradingViewChart'), {
-        width: document.getElementById('tradingViewChart').offsetWidth,
-        height: 450,
-        layout: {
-            background: { color: '#1e222d' },
-            textColor: '#d1d4dc',
-        },
-        grid: {
-            vertLines: { color: '#2a2e39' },
-            horzLines: { color: '#2a2e39' },
-        },
-        crosshair: {
-            mode: LightweightCharts.CrosshairMode.Normal,
-        },
-        rightPriceScale: {
-            borderColor: '#2a2e39',
-        },
-        timeScale: {
-            borderColor: '#2a2e39',
-            timeVisible: true,
-        },
-    });
+    console.log('Candle data prepared:', candleData.length, 'candles');
+    console.log('First candle:', candleData[0]);
+    console.log('Last candle:', candleData[candleData.length - 1]);
 
-    const candleSeries = priceChart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-    });
+    try {
+        // Create price chart
+        console.log('Creating price chart...');
+        priceChart = LightweightCharts.createChart(document.getElementById('tradingViewChart'), {
+            width: document.getElementById('tradingViewChart').offsetWidth,
+            height: 450,
+            layout: {
+                background: { color: '#1e222d' },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: { color: '#2a2e39' },
+                horzLines: { color: '#2a2e39' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+                borderColor: '#2a2e39',
+            },
+            timeScale: {
+                borderColor: '#2a2e39',
+                timeVisible: true,
+            },
+        });
 
-    candleSeries.setData(candleData);
+        console.log('Price chart created, adding candlestick series...');
+        const candleSeries = priceChart.addCandlestickSeries({
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderVisible: false,
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+        });
 
-    // Create volume chart
-    volumeChart = LightweightCharts.createChart(document.getElementById('volumeChart'), {
-        width: document.getElementById('volumeChart').offsetWidth,
-        height: 120,
-        layout: {
-            background: { color: '#1e222d' },
-            textColor: '#d1d4dc',
-        },
-        grid: {
-            vertLines: { color: '#2a2e39' },
-            horzLines: { color: '#2a2e39' },
-        },
-        rightPriceScale: {
-            borderColor: '#2a2e39',
-        },
-        timeScale: {
-            borderColor: '#2a2e39',
-            timeVisible: false,
-        },
-    });
+        candleSeries.setData(candleData);
+        console.log('Candlestick data set successfully');
+    } catch (error) {
+        console.error('Error creating price chart:', error);
+        chartDiv.innerHTML = '<div style="color: #ef5350; padding: 20px; text-align: center;">Error creating chart: ' + error.message + '</div>';
+        return;
+    }
 
-    const volumeSeries = volumeChart.addHistogramSeries({
-        color: '#26a69a',
-        priceFormat: {
-            type: 'volume',
-        },
-        priceScaleId: '',
-    });
+    try {
+        // Create volume chart
+        console.log('Creating volume chart...');
+        volumeChart = LightweightCharts.createChart(document.getElementById('volumeChart'), {
+            width: document.getElementById('volumeChart').offsetWidth,
+            height: 120,
+            layout: {
+                background: { color: '#1e222d' },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: { color: '#2a2e39' },
+                horzLines: { color: '#2a2e39' },
+            },
+            rightPriceScale: {
+                borderColor: '#2a2e39',
+            },
+            timeScale: {
+                borderColor: '#2a2e39',
+                timeVisible: false,
+            },
+        });
 
-    volumeSeries.setData(volumeData);
+        console.log('Volume chart created, adding histogram series...');
+        const volumeSeries = volumeChart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '',
+        });
+
+        volumeSeries.setData(volumeData);
+        console.log('Volume data set successfully');
+        console.log('✓ Charts rendered successfully!');
+    } catch (error) {
+        console.error('Error creating volume chart:', error);
+        volumeDiv.innerHTML = '<div style="color: #ef5350; padding: 20px; text-align: center;">Error creating volume chart: ' + error.message + '</div>';
+    }
 
     // Sync time scales
     priceChart.timeScale().subscribeVisibleTimeRangeChange(() => {
